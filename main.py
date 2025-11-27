@@ -33,7 +33,7 @@ def create_user(user_id: str, given_name: str, family_name: str, email: str):
  
     # SCIM Usersエンドポイント（テナントコード付き）
     # 参考：STA APIリファレンス（SCIM/RESTの使用方法とAuthorize手順）[1](https://thalesdocs.com/sta/api/)
-    scim_url = f"{STA_API_BASE}/v2/scim/tenants/{STA_TENANT_CODE}/Users"
+    scim_url = f"{STA_API_BASE}/tenants/{STA_TENANT_CODE}/scim/v2/Users"
     payload = {
         "userName": user_id,
         "name": {"givenName": given_name, "familyName": family_name},
