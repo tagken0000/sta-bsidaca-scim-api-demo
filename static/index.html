@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>STA + BSIDCA デモ</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; }
+    input { margin: .25rem 0; width: 320px; padding: .5rem; }
+    button { margin-right: .5rem; padding: .5rem 1rem; }
+    pre { background:#f5f5f5; padding:1rem; white-space: pre-wrap;}
+  </style>
+</head>
+<body>
+  <h2>Thales STA + MobilePASS デモ</h2>
+  <p>1) SCIMでSTAにユーザー作成 → 2) BSIDCAでMobilePASS割当＆エンロールメール送信</p>
+  <div>
+    <input id="userId" placeholder="ユーザーID (例: demo-2025-001)">
+    <input id="givenName" placeholder="名 (例: Taro)">
+    <input id="familyName" placeholder="姓 (例: Yamada)">
+    <input id="email" placeholder="メール (例: taro@example.com)">
+  </div>
+  <div style="margin-top: .5rem;">
+    <button onclick="createUser()">1) STAにユーザー作成</button>
+    <button onclick="enroll()">2) MobilePASSをエンロール</button>
+  </div>
+  <h3>結果</h3>
+  <pre id="out"></pre>
+ 
+  <script>
+    async function createUser(){
+      const params = new URLSearchParams({
+        user_id: document.getElementById('userId').value,
+        given_name: document.getElementById('givenName').value,
+        family_name: document.getElementById('familyName').value,
+        email: document.getElementById('email').value
+      });
+      const res = await fetch(`/api/create-user?${params.toString()}`, { method:'POST' });
+      document.getElementById('out').textContent = await res.text();
+    }
+    async function enroll(){
+      const params = new URLSearchParams({
+        user_id: document.getElementById('userId').value
+      });
+      const res = await fetch(`/api/enroll-token?${params.toString()}`, { method:'POST' });
+      document.getElementById('out').textContent = await res.text();
+    }
+  </script>
+</body>
+</html>
