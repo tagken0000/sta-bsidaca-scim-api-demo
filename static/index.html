@@ -1,49 +1,344 @@
-<!doctype html>
-<html lang="ja">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>STA + BSIDCA デモ</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STA API Demo</title>
   <style>
-    body { font-family: sans-serif; margin: 2rem; }
-    input { margin: .25rem 0; width: 320px; padding: .5rem; }
-    button { margin-right: .5rem; padding: .5rem 1rem; }
-    pre { background:#f5f5f5; padding:1rem; white-space: pre-wrap;}
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 { color: #333; margin-bottom: 10px; }
+    .subtitle { color: #666; margin-bottom: 30px; }
+    .status { padding: 10px 15px; border-radius: 6px; margin-bottom: 20px; }
+    .status.ok { background: #d4edda; color: #155724; }
+    .status.error { background: #f8d7da; color: #721c24; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
+    .card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .card h2 { font-size: 1.1rem; margin-bottom: 15px; color: #333; }
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; margin-left: 8px; }
+    .badge-scim { background: #e3f2fd; color: #1565c0; }
+    .badge-rest { background: #e8f5e9; color: #2e7d32; }
+    .badge-bsidca { background: #fff3e0; color: #e65100; }
+    .form-group { margin-bottom: 12px; }
+    label { display: block; font-size: 0.85rem; color: #666; margin-bottom: 4px; }
+    input, select { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.95rem; }
+    input:focus, select:focus { outline: none; border-color: #2196f3; }
+    button { width: 100%; padding: 10px; background: #2196f3; color: white; border: none; border-radius: 4px; font-size: 0.95rem; cursor: pointer; margin-top: 10px; }
+    button:hover { background: #1976d2; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    button.secondary { background: #757575; }
+    button.secondary:hover { background: #616161; }
+    button.danger { background: #f44336; }
+    button.danger:hover { background: #d32f2f; }
+    .debug { margin-top: 30px; }
+    .debug h2 { margin-bottom: 15px; }
+    .debug-content { background: #263238; color: #aed581; padding: 15px; border-radius: 6px; font-family: monospace; font-size: 0.85rem; max-height: 600px; overflow: auto; white-space: pre-wrap; word-break: break-all; }
+    .debug-section { border-left: 3px solid #4caf50; padding-left: 10px; margin-bottom: 15px; }
+    .debug-section h3 { color: #81c784; font-size: 0.9rem; margin-bottom: 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .debug-key { color: #64b5f6; }
+    .debug-string { color: #ffab91; }
+    .debug-number { color: #ce93d8; }
+    .debug-null { color: #90a4ae; }
+    .user-list { margin-top: 15px; max-height: 250px; overflow-y: auto; }
+    .user-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f9f9f9; border-radius: 4px; margin-bottom: 8px; }
+    .user-info { flex: 1; }
+    .user-name { font-weight: 500; }
+    .user-id { font-size: 0.75rem; color: #999; font-family: monospace; }
+    .user-actions { display: flex; gap: 5px; }
+    .user-actions button { width: auto; padding: 5px 10px; font-size: 0.8rem; margin: 0; }
+    .loading { text-align: center; padding: 20px; color: #666; }
   </style>
 </head>
 <body>
-  <h2>Thales STA + MobilePASS デモ</h2>
-  <p>1) SCIMでSTAにユーザー作成 → 2) BSIDCAでMobilePASS割当＆エンロールメール送信</p>
-  <div>
-    <input id="userId" placeholder="ユーザーID (例: demo-2025-001)">
-    <input id="givenName" placeholder="名 (例: Taro)">
-    <input id="familyName" placeholder="姓 (例: Yamada)">
-    <input id="email" placeholder="メール (例: taro@example.com)">
+  <div class="container">
+    <h1>STA API Demo</h1>
+    <p class="subtitle">SCIM User Registration & MobilePASS+ Token Provisioning</p>
+
+    <div id="status" class="status">Checking API status...</div>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Create User <span class="badge badge-scim">SCIM</span></h2>
+        <form id="createUserForm">
+          <div class="form-group">
+            <label>User ID (Username/Identifier)</label>
+            <input type="text" id="userId" required placeholder="jdoe or john.doe@example.com">
+          </div>
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" id="emailAddress" required placeholder="john.doe@example.com">
+          </div>
+          <div class="form-group">
+            <label>First Name</label>
+            <input type="text" id="givenName" required placeholder="John">
+          </div>
+          <div class="form-group">
+            <label>Last Name</label>
+            <input type="text" id="familyName" required placeholder="Doe">
+          </div>
+          <button type="submit">Create User</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>Users <span class="badge badge-scim">SCIM</span></h2>
+        <button id="refreshUsers" class="secondary">Refresh Users</button>
+        <div id="userList" class="user-list">
+          <div class="loading">Click refresh to load users</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Provision Token <span class="badge badge-bsidca">BSIDCA</span></h2>
+        <form id="provisionTokenForm">
+          <div class="form-group">
+            <label>Username / Email</label>
+            <input type="text" id="tokenUserName" required placeholder="user@example.com">
+          </div>
+          <div class="form-group">
+            <label>Token Type</label>
+            <select id="tokenType">
+              <option value="MobilePASS">MobilePASS (MobilePASS+ App)</option>
+              <option value="Software">Software (Generic TOTP)</option>
+              <option value="GoogleAuthenticator">Google Authenticator</option>
+              <option value="SMS">SMS</option>
+              <option value="Oath">OATH</option>
+              <option value="Password">Password</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Description (optional)</label>
+            <input type="text" id="tokenDescription" placeholder="Token description">
+          </div>
+          <button type="submit">Provision Token</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="debug card">
+      <h2>Debug Output</h2>
+      <div id="debugOutput" class="debug-content">API responses will appear here...</div>
+    </div>
   </div>
-  <div style="margin-top: .5rem;">
-    <button onclick="createUser()">1) STAにユーザー作成</button>
-    <button onclick="enroll()">2) MobilePASSをエンロール</button>
-  </div>
-  <h3>結果</h3>
-  <pre id="out"></pre>
- 
+
   <script>
-    async function createUser(){
-      const params = new URLSearchParams({
-        user_id: document.getElementById('userId').value,
-        given_name: document.getElementById('givenName').value,
-        family_name: document.getElementById('familyName').value,
-        email: document.getElementById('email').value
-      });
-      const res = await fetch(`/api/create-user?${params.toString()}`, { method:'POST' });
-      document.getElementById('out').textContent = await res.text();
+    const debugEl = document.getElementById('debugOutput');
+    const statusEl = document.getElementById('status');
+
+    function formatDebugOutput(data) {
+      let output = '';
+
+      // Show REQUEST section if available
+      if (data.debug && data.debug.request) {
+        const req = data.debug.request;
+        output += '=== REQUEST ===\n';
+        output += `Method: ${req.method}\n`;
+        output += `URL: ${req.url}\n`;
+
+        if (req.headers) {
+          output += '\nHeaders:\n';
+          for (const [key, value] of Object.entries(req.headers)) {
+            output += `  ${key}: ${value}\n`;
+          }
+        }
+
+        if (req.soapAction) {
+          output += `\nSOAP Action: ${req.soapAction}\n`;
+        }
+
+        if (req.body || req.parameters) {
+          output += '\nPayload:\n';
+          if (req.soapEnvelope) {
+            output += req.soapEnvelope + '\n';
+          } else if (req.body) {
+            output += JSON.stringify(req.body, null, 2) + '\n';
+          }
+          if (req.parameters) {
+            output += '\nParameters: ' + JSON.stringify(req.parameters, null, 2) + '\n';
+          }
+        }
+
+        if (req.note) {
+          output += `\nNote: ${req.note}\n`;
+        }
+
+        output += '\n';
+      }
+
+      // Show RESPONSE section if available
+      if (data.debug && data.debug.response) {
+        const res = data.debug.response;
+        output += '=== RESPONSE ===\n';
+        output += `Status: ${res.status} ${res.statusText || ''}\n`;
+
+        if (res.headers) {
+          output += '\nHeaders:\n';
+          for (const [key, value] of Object.entries(res.headers)) {
+            if (value) output += `  ${key}: ${value}\n`;
+          }
+        }
+
+        output += '\n';
+      }
+
+      // Show full response data
+      output += '=== FULL RESPONSE ===\n';
+      output += JSON.stringify(data, null, 2);
+
+      return output;
     }
-    async function enroll(){
-      const params = new URLSearchParams({
-        user_id: document.getElementById('userId').value
-      });
-      const res = await fetch(`/api/enroll-token?${params.toString()}`, { method:'POST' });
-      document.getElementById('out').textContent = await res.text();
+
+    function log(data) {
+      // Use enhanced formatting if debug info is available
+      if (data.debug && (data.debug.request || data.debug.response)) {
+        debugEl.textContent = formatDebugOutput(data);
+      } else {
+        debugEl.textContent = JSON.stringify(data, null, 2);
+      }
     }
+
+    async function checkStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+        if (data.configured) {
+          statusEl.className = 'status ok';
+          statusEl.textContent = 'API Connected - Ready to use';
+        } else {
+          statusEl.className = 'status error';
+          statusEl.textContent = 'API Not Configured - Set environment variables in Railway';
+        }
+        log(data);
+      } catch (e) {
+        statusEl.className = 'status error';
+        statusEl.textContent = 'Error: ' + e.message;
+      }
+    }
+
+    async function loadUsers() {
+      const list = document.getElementById('userList');
+      list.innerHTML = '<div class="loading">Loading...</div>';
+      try {
+        const res = await fetch('/api/scim/users');
+        const data = await res.json();
+        log(data);
+        if (data.success && data.data.Resources) {
+          if (data.data.Resources.length === 0) {
+            list.innerHTML = '<div class="loading">No users found</div>';
+          } else {
+            list.innerHTML = data.data.Resources.map(u => {
+              const emailValue = u.emails && u.emails.length > 0 ? u.emails[0].value : '';
+              return `
+              <div class="user-item">
+                <div class="user-info">
+                  <div class="user-name">${u.name?.givenName || ''} ${u.name?.familyName || ''}</div>
+                  <div class="user-id">ID: ${u.userName || u.id}</div>
+                  ${emailValue ? `<div class="user-id">Email: ${emailValue}</div>` : ''}
+                </div>
+                <div class="user-actions">
+                  <button onclick="selectUser('${u.userName || u.id}')">Select</button>
+                  <button class="danger" onclick="deleteUser('${u.id}')">Delete</button>
+                </div>
+              </div>
+              `;
+            }).join('');
+          }
+        } else {
+          list.innerHTML = '<div class="loading">Failed to load</div>';
+        }
+      } catch (e) {
+        list.innerHTML = '<div class="loading">Error: ' + e.message + '</div>';
+      }
+    }
+
+    function selectUser(userName) {
+      document.getElementById('tokenUserName').value = userName;
+      alert('Username copied to token form');
+    }
+
+    async function deleteUser(id) {
+      if (!confirm('Delete this user?')) return;
+      try {
+        const res = await fetch('/api/scim/users/' + id, { method: 'DELETE' });
+        const data = await res.json();
+        log(data);
+        loadUsers();
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    document.getElementById('createUserForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button');
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/scim/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: document.getElementById('userId').value,
+            email: document.getElementById('emailAddress').value,
+            givenName: document.getElementById('givenName').value,
+            familyName: document.getElementById('familyName').value
+          })
+        });
+        const data = await res.json();
+        log(data);
+        if (data.success) {
+          alert('User created! ID: ' + (data.data?.id || 'See debug'));
+          e.target.reset();
+          loadUsers();
+        }
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+      btn.disabled = false;
+    };
+
+    document.getElementById('provisionTokenForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button');
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/tokens', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userName: document.getElementById('tokenUserName').value,
+            tokenType: document.getElementById('tokenType').value,
+            description: document.getElementById('tokenDescription').value
+          })
+        });
+        const data = await res.json();
+        log(data);
+        if (data.success) {
+          const results = data.provisioningResults || [];
+          alert('Token provisioned! Results: ' + results.join(', '));
+        } else {
+          alert('Provisioning failed: ' + (data.error || 'See debug output'));
+        }
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+      btn.disabled = false;
+    };
+
+    document.getElementById('refreshUsers').onclick = loadUsers;
+
+    // Tokens section commented out
+    // document.getElementById('refreshTokens').onclick = async () => {
+    //   try {
+    //     const res = await fetch('/api/tokens');
+    //     const data = await res.json();
+    //     log(data);
+    //   } catch (e) {
+    //     alert('Error: ' + e.message);
+    //   }
+    // };
+
+    checkStatus();
   </script>
 </body>
 </html>
